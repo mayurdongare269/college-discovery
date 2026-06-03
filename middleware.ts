@@ -7,22 +7,19 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token, req }) => {
-        const path = req.nextUrl.pathname;
-        
-        // Public routes
-        const publicRoutes = ['/', '/login', '/signup', '/colleges'];
-        if (publicRoutes.some(route => path === route || path.startsWith('/colleges/'))) {
-          return true;
-        }
-
-        // Protected routes require token
-        return !!token;
-      },
+      authorized: ({ token }) => !!token,
+    },
+    pages: {
+      signIn: '/login',
     },
   }
 );
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/saved/:path*', '/compare/:path*', '/profile/:path*'],
+  matcher: [
+    '/dashboard/:path*',
+    '/saved/:path*',
+    '/compare/:path*',
+    '/profile/:path*',
+  ],
 };

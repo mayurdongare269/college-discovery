@@ -21,8 +21,24 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      // In production, create user first
-      // For demo, just sign in
+      // Create user via signup API
+      const signupResponse = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const signupData = await signupResponse.json();
+
+      if (!signupResponse.ok) {
+        setError(signupData.error || 'Failed to create account');
+        setLoading(false);
+        return;
+      }
+
+      // Automatically sign in after successful signup
       const result = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
@@ -30,14 +46,15 @@ export default function SignupPage() {
       });
 
       if (result?.error) {
-        setError('Failed to create account');
+        setError('Account created but login failed. Please try logging in.');
+        setLoading(false);
+        setTimeout(() => router.push('/login'), 2000);
       } else {
         router.push('/dashboard');
         router.refresh();
       }
     } catch (err) {
       setError('Something went wrong');
-    } finally {
       setLoading(false);
     }
   };
