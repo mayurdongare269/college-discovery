@@ -7,12 +7,65 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ExamType {
+  MHT_CET
+  JEE_MAIN
+}
+
+enum Category {
+  OPEN
+  OBC
+  EWS
+  SC
+  ST
+}
+
 model College {
+  id              Int      @id @default(autoincrement())
+  name            String
+  shortName       String
+  location        String
+  state           String
+  type            String
+  ownership       String
+  fees            Int
+  rating          Float
+  placementScore  Float
+  nirfRank        Int?
+  website         String?
+  establishedYear Int
+  courses         Course[]
+  createdAt       DateTime @default(now())
+
+  @@index([state])
+  @@index([type])
+}
+
+model Course {
   id        Int      @id @default(autoincrement())
   name      String
-  location  String
-  fees      Int
-  rating    Float
-  placement Float
+  duration  Int
+  seats     Int
+  collegeId Int
+  college   College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  cutoffs   Cutoff[]
   createdAt DateTime @default(now())
+
+  @@index([collegeId])
+  @@index([name])
+}
+
+model Cutoff {
+  id          Int      @id @default(autoincrement())
+  examType    ExamType
+  category    Category
+  branch      String
+  cutoffScore Float
+  year        Int
+  courseId    Int
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([courseId])
+  @@index([examType, category, year])
 }
