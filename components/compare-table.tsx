@@ -9,10 +9,12 @@ interface CompareTableProps {
     nirfRank: number | null;
     location: string;
     state: string;
+    acceptedExams?: string;
   }[];
+  onRemove?: (collegeId: number) => void;
 }
 
-export default function CompareTable({ colleges }: CompareTableProps) {
+export default function CompareTable({ colleges, onRemove }: CompareTableProps) {
   if (colleges.length === 0) {
     return (
       <div className="text-center py-12 text-gray-600">
@@ -30,8 +32,19 @@ export default function CompareTable({ colleges }: CompareTableProps) {
               Parameter
             </th>
             {colleges.map((college) => (
-              <th key={college.id} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                {college.shortName}
+              <th key={college.id} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase relative">
+                <div className="flex items-center justify-between">
+                  <span>{college.shortName}</span>
+                  {onRemove && (
+                    <button
+                      onClick={() => onRemove(college.id)}
+                      className="ml-2 text-red-500 hover:text-red-700"
+                      title="Remove"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </th>
             ))}
           </tr>
@@ -77,6 +90,16 @@ export default function CompareTable({ colleges }: CompareTableProps) {
               </td>
             ))}
           </tr>
+          {colleges.some(c => c.acceptedExams) && (
+            <tr>
+              <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">Accepted Exams</td>
+              {colleges.map((college) => (
+                <td key={college.id} className="px-6 py-4 text-gray-600">
+                  {college.acceptedExams?.split(',').join(', ') || 'N/A'}
+                </td>
+              ))}
+            </tr>
+          )}
         </tbody>
       </table>
     </div>

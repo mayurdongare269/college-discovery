@@ -5,6 +5,38 @@ import { Prisma } from '@prisma/client';
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    
+    // Handle single college fetch by ID
+    const id = searchParams.get('id');
+    if (id) {
+      const college = await prisma.college.findUnique({
+        where: { id: parseInt(id) },
+        include: {
+          courses: {
+            include: {
+              cutoffs: {
+                take: 5,
+                orderBy: { year: 'desc' },
+              },
+            },
+          },
+        },
+      });
+
+      if (!college) {
+        return NextResponse.json(
+          { success: false, error: 'College not found' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: [college],
+      });
+    }
+
+    // Regular search/filter logic
     const search = searchParams.get('search') || '';
     const state = searchParams.get('state') || '';
     const examType = searchParams.get('examType') || '';
@@ -28,17 +60,17 @@ export async function GET(request: NextRequest) {
       where.state = { contains: state, mode: 'insensitive' };
     }
 
-    if (course || examType) {
+    // Filter by exam type - CRITICAL: Only show colleges that accept this exam
+    if (examType) {
+      where.acceptedExams = {
+        contains: examType,
+      };
+    }
+
+    if (course) {
       where.courses = {
         some: {
-          ...(course && { name: { contains: course, mode: 'insensitive' } }),
-          ...(examType && {
-            cutoffs: {
-              some: {
-                examType: examType as any,
-              },
-            },
-          }),
+          name: { contains: course, mode: 'insensitive' },
         },
       };
     }
@@ -54,6 +86,7 @@ export async function GET(request: NextRequest) {
               cutoffs: {
                 take: 5,
                 orderBy: { year: 'desc' },
+                ...(examType && { where: { examType: examType as any } }),
               },
             },
             take: 3,

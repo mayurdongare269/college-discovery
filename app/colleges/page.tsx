@@ -64,7 +64,12 @@ export default function CollegesPage() {
   };
 
   useEffect(() => {
-    fetchColleges();
+    // Debounce search
+    const timeoutId = setTimeout(() => {
+      fetchColleges();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
   }, [page, filters]);
 
   return (
@@ -119,6 +124,7 @@ export default function CollegesPage() {
               <option value="">All Exams</option>
               <option value="MHT_CET">MHT-CET</option>
               <option value="JEE_MAIN">JEE Main</option>
+              <option value="JEE_ADVANCED">JEE Advanced</option>
             </select>
             <select
               value={filters.course}

@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
+import { useCompare } from '@/lib/compare-context';
 
 export default function Navbar() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
+  const { compareCount } = useCompare();
 
   const isActive = (path: string) => pathname === path;
 
@@ -40,11 +42,16 @@ export default function Navbar() {
             </Link>
             <Link
               href="/compare"
-              className={`text-sm font-medium transition-colors ${
+              className={`text-sm font-medium transition-colors relative ${
                 isActive('/compare') ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600'
               }`}
             >
               Compare
+              {compareCount > 0 && (
+                <span className="absolute -top-2 -right-3 bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {compareCount}
+                </span>
+              )}
             </Link>
             {session && (
               <Link

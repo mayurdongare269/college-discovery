@@ -3,8 +3,11 @@ import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import ClientActions from './client-actions';
 
-async function getCollege(id: string) {
+async function getCollege(id: string, userEmail?: string) {
   const collegeId = parseInt(id);
   if (isNaN(collegeId)) {
     return null;
@@ -25,7 +28,24 @@ async function getCollege(id: string) {
       },
     });
 
-    return college;
+    if (!college) return null;
+
+    // Check if saved by current user
+    let isSaved = false;
+    if (userEmail) {
+      const user = await prisma.user.findUnique({
+        where: { email: userEmail },
+        include: {
+          savedColleges: {
+            where: { collegeId },
+            select: { id: true },
+          },
+        },
+      });
+      isSaved = (user?.savedColleges?.length || 0) > 0;
+    }
+
+    return { college, isSaved };
   } catch (error) {
     console.error('Error fetching college:', error);
     return null;
@@ -38,11 +58,15 @@ export default async function CollegeDetailsPage({
   params: Promise<{ id: string }> | { id: string }
 }) {
   const resolvedParams = await Promise.resolve(params);
-  const college = await getCollege(resolvedParams.id);
+  const session = await getServerSession(authOptions);
+  
+  const result = await getCollege(resolvedParams.id, session?.user?.email);
 
-  if (!college) {
+  if (!result) {
     notFound();
   }
+
+  const { college, isSaved } = result;
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -102,24 +126,23 @@ export default async function CollegeDetailsPage({
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-4">
-            <button className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-              ❤️ Save College
-            </button>
-            <button className="px-6 py-3 bg-white text-gray-700 font-semibold border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-              ⚖️ Add to Compare
-            </button>
-            {college.website && (
+          <ClientActions 
+            collegeId={college.id} 
+            collegeName={college.shortName}
+            initialSaved={isSaved}
+          />
+          {college.website && (
+            <div className="mt-4">
               <a
                 href={college.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 bg-white text-gray-700 font-semibold border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="inline-block px-6 py-3 bg-white text-gray-700 font-semibold border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 🌐 Visit Website
               </a>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Courses */}

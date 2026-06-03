@@ -10,6 +10,7 @@ datasource db {
 enum ExamType {
   MHT_CET
   JEE_MAIN
+  JEE_ADVANCED
 }
 
 enum Category {
@@ -21,15 +22,33 @@ enum Category {
 }
 
 model User {
+  id              String          @id @default(cuid())
+  name            String
+  email           String          @unique
+  password        String
+  preferredBranch String?
+  preferredState  String?
+  preferredExam   ExamType?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @default(now()) @updatedAt
+  savedColleges   SavedCollege[]
+}
+
+model SavedCollege {
   id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
+  userId    String
+  collegeId Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college   College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  @@unique([userId, collegeId])
+  @@index([userId])
+  @@index([collegeId])
 }
 
 model College {
-  id              Int      @id @default(autoincrement())
+  id              Int            @id @default(autoincrement())
   name            String
   shortName       String
   location        String
@@ -42,8 +61,10 @@ model College {
   nirfRank        Int?
   website         String?
   establishedYear Int
+  acceptedExams   String         @default("JEE_MAIN") // Comma-separated: "JEE_MAIN,JEE_ADVANCED"
   courses         Course[]
-  createdAt       DateTime @default(now())
+  savedBy         SavedCollege[]
+  createdAt       DateTime       @default(now())
 
   @@index([state])
   @@index([type])
