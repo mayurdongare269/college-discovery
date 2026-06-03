@@ -68,26 +68,35 @@ export default function CollegesPage() {
   }, [page, filters]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Explore Colleges</h1>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Explore Colleges</h1>
+          <p className="text-gray-600">Discover top colleges across India</p>
+        </div>
 
         {/* Filters */}
-        <div className="bg-white border rounded-lg p-6 mb-8">
+        <div className="bg-white rounded-xl shadow-sm border p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <input
               type="text"
               placeholder="Search colleges..."
               value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => {
+                setFilters({ ...filters, search: e.target.value });
+                setPage(1);
+              }}
+              className="px-4 py-3 text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500"
             />
             <select
               value={filters.state}
-              onChange={(e) => setFilters({ ...filters, state: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => {
+                setFilters({ ...filters, state: e.target.value });
+                setPage(1);
+              }}
+              className="px-4 py-3 text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All States</option>
               <option value="Maharashtra">Maharashtra</option>
@@ -95,11 +104,17 @@ export default function CollegesPage() {
               <option value="Tamil Nadu">Tamil Nadu</option>
               <option value="Delhi">Delhi</option>
               <option value="Telangana">Telangana</option>
+              <option value="Gujarat">Gujarat</option>
+              <option value="Rajasthan">Rajasthan</option>
+              <option value="Uttar Pradesh">Uttar Pradesh</option>
             </select>
             <select
               value={filters.examType}
-              onChange={(e) => setFilters({ ...filters, examType: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => {
+                setFilters({ ...filters, examType: e.target.value });
+                setPage(1);
+              }}
+              className="px-4 py-3 text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All Exams</option>
               <option value="MHT_CET">MHT-CET</option>
@@ -107,13 +122,18 @@ export default function CollegesPage() {
             </select>
             <select
               value={filters.course}
-              onChange={(e) => setFilters({ ...filters, course: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => {
+                setFilters({ ...filters, course: e.target.value });
+                setPage(1);
+              }}
+              className="px-4 py-3 text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All Courses</option>
               <option value="Computer">Computer Engineering</option>
               <option value="Information Technology">Information Technology</option>
               <option value="AI">AI & Data Science</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Mechanical">Mechanical</option>
             </select>
           </div>
         </div>
@@ -124,16 +144,20 @@ export default function CollegesPage() {
         ) : error ? (
           <ErrorState message={error} onRetry={fetchColleges} />
         ) : colleges.length === 0 ? (
-          <EmptyState
-            icon="🔍"
-            title="No colleges found"
-            description="Try adjusting your filters"
-          />
+          <div className="bg-white rounded-xl shadow-sm border">
+            <EmptyState
+              icon="🔍"
+              title="No colleges found"
+              description="Try adjusting your filters to see more results"
+            />
+          </div>
         ) : (
           <>
-            <p className="text-sm text-gray-600 mb-4">
-              Showing {colleges.length} of {total} colleges
-            </p>
+            <div className="flex items-center justify-between mb-6">
+              <p className="text-sm text-gray-600">
+                Showing {colleges.length} of {total} colleges
+              </p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {colleges.map((college) => (
                 <CollegeCard key={college.id} {...college} />
@@ -141,21 +165,21 @@ export default function CollegesPage() {
             </div>
 
             {/* Pagination */}
-            <div className="flex justify-center gap-2">
+            <div className="flex justify-center items-center gap-2">
               <button
                 onClick={() => setPage(page - 1)}
                 disabled={page === 1}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
-                Previous
+                ← Previous
               </button>
-              <span className="px-4 py-2 font-medium">Page {page}</span>
+              <span className="px-6 py-3 font-medium text-gray-900">Page {page}</span>
               <button
                 onClick={() => setPage(page + 1)}
                 disabled={colleges.length < 12}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
-                Next
+                Next →
               </button>
             </div>
           </>
