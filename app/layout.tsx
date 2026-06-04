@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import AIChatbot from "@/components/ai-chatbot";
 
 export const metadata: Metadata = {
   title: "CollegeIQ AI - Find Your Perfect College",
@@ -15,7 +16,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <AIChatbot />
+        </Providers>
       </body>
     </html>
   );
