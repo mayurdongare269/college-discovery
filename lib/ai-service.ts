@@ -98,6 +98,117 @@ export async function generateAIResponse(
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Chatbot-specific: exam-aware, web-knowledge fallback
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ChatMeta {
+  detectedExam: string | null;   // e.g. 'MHT_CET' | 'JEE_MAIN' | 'JEE_ADVANCED' | null
+  dbCollegeCount: number;         // how many colleges were retrieved from DB
+  hasEnoughData: boolean;         // true if dbCollegeCount >= 3
+}
+
+/**
+ * Chatbot-specific AI call.
+ * - Uses a strict, exam-aware system prompt
+ * - When DB has fewer than 3 colleges for the query, instructs the LLM to
+ *   draw on its own training knowledge (real-world data it was trained on)
+ *   rather than making up answers or giving wrong suggestions
+ */
+export async function generateAIResponseWithWebFallback(
+  prompt: string,
+  context?: string,
+  meta?: ChatMeta
+): Promise<AIResponse> {
+  // ── Exam constraint line (critical for correctness) ──────────────
+  const examConstraintMap: Record<string, string> = {
+    MHT_CET:
+      'IMPORTANT: The student is asking about MHT-CET (Maharashtra Common Entrance Test). ' +
+      'MHT-CET is ONLY valid for Maharashtra state engineering colleges. ' +
+      'IITs, NITs (outside Maharashtra), IIITs, BITS Pilani, VIT, SRM, Manipal, and most national colleges do NOT accept MHT-CET. ' +
+      'NEVER suggest IIT Bombay, IIT Delhi, NIT Trichy, or any college that requires JEE for MHT-CET students. ' +
+      'Only suggest colleges from Maharashtra that accept MHT-CET such as COEP, VJTI, PICT, SPCE, VIT Pune, MIT WPU, KJSCE, WCE, VIIT, AIT, BVCOE, ICT Mumbai, VNIT Nagpur, etc.',
+    JEE_MAIN:
+      'IMPORTANT: The student is asking about JEE Main. ' +
+      'JEE Main is valid for NITs, IIITs, GFTIs, and most private engineering colleges. ' +
+      'IITs require JEE Advanced — do NOT suggest IITs for a JEE Main student unless they specifically ask about JEE Advanced. ' +
+      'Suggest NITs (NIT Trichy, NIT Surathkal, NIT Warangal, etc.), IIITs, DTU, NSUT, BITS Pilani, VIT, SRM, Manipal, Thapar etc.',
+    JEE_ADVANCED:
+      'IMPORTANT: The student is asking about JEE Advanced. ' +
+      'JEE Advanced is for IIT admissions. All IITs (Bombay, Delhi, Madras, Kanpur, Kharagpur, Roorkee, Guwahati, Hyderabad) accept JEE Advanced. ' +
+      'Students who qualify JEE Advanced also qualify JEE Main, so NITs are also valid options.',
+  };
+
+  const examConstraint = meta?.detectedExam
+    ? examConstraintMap[meta.detectedExam] ?? ''
+    : '';
+
+  // ── System prompt ─────────────────────────────────────────────────
+  const systemPrompt = [
+    'You are CollegeIQ AI — a knowledgeable, honest college counseling assistant for Indian engineering students.',
+    '',
+    examConstraint,
+    '',
+    'STRICT RULES:',
+    '1. NEVER recommend a college that does not accept the student\'s exam type.',
+    '2. IITs accept ONLY JEE Advanced. Never suggest IITs for MHT-CET or JEE Main students.',
+    '3. Maharashtra colleges like COEP, VJTI, PICT accept MHT-CET. National colleges like NITs/IITs do NOT.',
+    '4. Use the platform data provided in the context when available.',
+    '5. If the platform data has limited colleges for the query, use your own real-world knowledge about Indian engineering colleges to give a complete and helpful answer — including colleges not in our platform database.',
+    '6. Always mention exam eligibility when suggesting colleges.',
+    '7. Include realistic cutoff percentile ranges based on recent years (2022–2024) when discussing admission chances.',
+    '8. Be specific: mention actual college names, cutoff ranges, and fees.',
+    '9. If a student gives you a score, assess their realistic admission chances honestly.',
+    '10. Format your response clearly with bullet points or sections where appropriate.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  // ── Build user prompt ─────────────────────────────────────────────
+  let userPrompt: string;
+
+  if (context && (meta?.dbCollegeCount ?? 0) > 0) {
+    userPrompt =
+      `Here is data from our college database for this query:\n\n${context}\n\n` +
+      (meta && !meta.hasEnoughData
+        ? `Note: Our database only returned ${meta.dbCollegeCount} college(s) for this specific query. ` +
+          `Please supplement with your knowledge of other real Indian colleges that match the student's exam type and requirements.\n\n`
+        : '') +
+      `Student's question: ${prompt}`;
+  } else if (context) {
+    userPrompt = `College context:\n\n${context}\n\nStudent's question: ${prompt}`;
+  } else {
+    userPrompt =
+      `Our platform database did not find specific colleges for this query. ` +
+      `Please answer using your knowledge of Indian engineering colleges, admission processes, cutoffs, and exam systems.\n\n` +
+      `Student's question: ${prompt}`;
+  }
+
+  // ── PRIMARY: Groq ─────────────────────────────────────────────────
+  try {
+    console.log('[ChatAI] Trying Groq with exam-aware prompt...');
+    const text = await callGroq(systemPrompt, userPrompt);
+    console.log('[ChatAI] ✓ Groq responded');
+    return { success: true, data: text, provider: 'groq' };
+  } catch (groqErr) {
+    console.warn('[ChatAI] Groq failed:', (groqErr as Error).message);
+  }
+
+  // ── FALLBACK: Gemini ──────────────────────────────────────────────
+  try {
+    const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
+    const text = await callGemini(fullPrompt);
+    console.log('[ChatAI] ✓ Gemini (fallback) responded');
+    return { success: true, data: text, provider: 'gemini' };
+  } catch (geminiErr) {
+    console.error('[ChatAI] ✗ Both LLMs failed');
+    return {
+      success: false,
+      error: 'AI service is temporarily unavailable. Please try again in a moment.',
+    };
+  }
+}
+
 /**
  * Calculate match score (0–100) for a college based on user preferences
  */
