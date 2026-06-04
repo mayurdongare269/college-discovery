@@ -100,8 +100,18 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Support both query param ?collegeId=X and JSON body { collegeId }
     const { searchParams } = new URL(request.url);
-    const collegeId = searchParams.get('collegeId');
+    let collegeId = searchParams.get('collegeId');
+
+    if (!collegeId) {
+      try {
+        const body = await request.json();
+        collegeId = body.collegeId?.toString() ?? null;
+      } catch {
+        // no body — fall through to 400
+      }
+    }
 
     if (!collegeId) {
       return NextResponse.json({ error: 'College ID required' }, { status: 400 });
