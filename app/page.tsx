@@ -12,8 +12,8 @@ const SLIDES = [
     alt: 'University campus aerial view',
   },
   {
-    url: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1400&q=80',
-    alt: 'Students in college library',
+    url: 'https://images.unsplash.com/photo-1607237138185-eedd9c632b0b?w=1400&q=80',
+    alt: 'Students at university campus',
   },
   {
     url: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1400&q=80',
