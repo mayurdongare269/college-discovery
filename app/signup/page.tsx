@@ -7,11 +7,7 @@ import { signIn } from 'next-auth/react';
 
 export default function SignupPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-  });
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -19,129 +15,103 @@ export default function SignupPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
-      // Create user via signup API
-      const signupResponse = await fetch('/api/auth/signup', {
+      const res = await fetch('/api/auth/signup', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
       });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Failed to create account'); setLoading(false); return; }
 
-      const signupData = await signupResponse.json();
-
-      if (!signupResponse.ok) {
-        setError(signupData.error || 'Failed to create account');
-        setLoading(false);
-        return;
-      }
-
-      // Automatically sign in after successful signup
-      const result = await signIn('credentials', {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setError('Account created but login failed. Please try logging in.');
-        setLoading(false);
-        setTimeout(() => router.push('/login'), 2000);
-      } else {
-        router.push('/dashboard');
-        router.refresh();
-      }
-    } catch (err) {
-      setError('Something went wrong');
-      setLoading(false);
-    }
+      const result = await signIn('credentials', { email: form.email, password: form.password, redirect: false });
+      if (result?.error) { router.push('/login'); return; }
+      router.push('/dashboard');
+      router.refresh();
+    } catch { setError('Something went wrong. Please try again.'); }
+    finally { setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center space-x-2 mb-6">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">C</span>
-            </div>
-            <span className="text-2xl font-bold text-gray-900">CollegeIQ AI</span>
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mt-6">Create Account</h1>
-          <p className="text-gray-600 mt-2">Start your college discovery journey</p>
+    <div className="min-h-screen bg-slate-50 flex">
+      {/* Left panel */}
+      <div className="hidden md:flex flex-col justify-between w-5/12 lg:w-2/5 bg-slate-900 px-10 py-12">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3z"/>
+            </svg>
+          </div>
+          <span className="text-white font-bold">CollegeIQ AI</span>
+        </Link>
+        <div>
+          <h2 className="text-3xl font-bold text-white mb-4">Your AI admission counselor</h2>
+          <p className="text-slate-400 leading-relaxed mb-8">
+            Get personalised Safe, Target, and Dream college lists. Compare colleges. Chat with an AI counselor. All free.
+          </p>
+          <div className="space-y-3">
+            {['Free forever', 'No spam or ads', 'Real cutoff data'].map(item => (
+              <div key={item} className="flex items-center gap-3 text-sm text-slate-300">
+                <svg className="w-4 h-4 text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+                {item}
+              </div>
+            ))}
+          </div>
         </div>
+        <p className="text-xs text-slate-600">© 2026 CollegeIQ AI</p>
+      </div>
 
-        <div className="bg-white rounded-lg shadow-sm border p-8">
+      {/* Form */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-sm">
+          <div className="md:hidden mb-8 text-center">
+            <Link href="/" className="inline-flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3z"/>
+                </svg>
+              </div>
+              <span className="font-bold text-slate-900">CollegeIQ AI</span>
+            </Link>
+          </div>
+
+          <h1 className="text-2xl font-bold text-slate-900 mb-1">Create your account</h1>
+          <p className="text-sm text-slate-500 mb-8">Start your college discovery journey — free forever.</p>
+
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-              {error}
-            </div>
+            <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
           )}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-900 mb-2">
-                Full Name
-              </label>
-              <input
-                id="name"
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-3 text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-500"
-                placeholder="John Doe"
-              />
-            </div>
 
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-900 mb-2">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-3 text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-500"
-                placeholder="you@example.com"
-              />
+              <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1.5">Full name</label>
+              <input id="name" type="text" required value={form.name}
+                onChange={e => setForm({ ...form, name: e.target.value })}
+                className="input" placeholder="Rahul Sharma" />
             </div>
-
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-900 mb-2">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-3 text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-500"
-                placeholder="Create a password"
-              />
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">Email address</label>
+              <input id="email" type="email" required value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                className="input" placeholder="you@example.com" />
             </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Creating account...' : 'Create Account'}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+              <input id="password" type="password" required value={form.password}
+                onChange={e => setForm({ ...form, password: e.target.value })}
+                className="input" placeholder="Create a password" />
+            </div>
+            <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 text-sm">
+              {loading ? 'Creating account…' : 'Create Account'}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
-                Sign in
-              </Link>
-            </p>
-          </div>
+          <p className="mt-6 text-center text-sm text-slate-500">
+            Already have an account?{' '}
+            <Link href="/login" className="text-blue-600 font-semibold hover:underline">Sign in</Link>
+          </p>
         </div>
       </div>
     </div>
