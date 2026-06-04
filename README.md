@@ -11,7 +11,7 @@
 
 **CollegeIQ AI** is a full-stack, production-ready AI-powered college counseling platform for Indian engineering students. It combines a rule-based recommendation engine, an exam-aware RAG chatbot (Groq + Gemini), and a comprehensive college database to help students make informed admission decisions.
 
-🌐 **[Live Demo](https://college-discovery.vercel.app)** | 📐 **[Architecture Docs](PROJECT_ARCHITECTURE.md)**
+🌐 **[Live Demo](https://collegeiq-ai.vercel.app/)** | 📐 **[Architecture Docs](PROJECT_ARCHITECTURE.md)**
 
 ---
 
