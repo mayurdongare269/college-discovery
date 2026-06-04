@@ -129,6 +129,15 @@ function getRandomCutoff(examType: ExamType, category: Category, year: number): 
       case Category.SC: baseScore = 70 + Math.random() * 15; break;
       case Category.ST: baseScore = 65 + Math.random() * 15; break;
     }
+  } else if (examType === ExamType.JEE_ADVANCED) {
+    // JEE Advanced rank-to-percentile equivalent ranges (very competitive)
+    switch (category) {
+      case Category.OPEN: baseScore = 97 + Math.random() * 2.5; break;
+      case Category.OBC: baseScore = 94 + Math.random() * 3; break;
+      case Category.EWS: baseScore = 95 + Math.random() * 3; break;
+      case Category.SC: baseScore = 88 + Math.random() * 7; break;
+      case Category.ST: baseScore = 85 + Math.random() * 8; break;
+    }
   } else {
     // JEE Main percentile ranges
     switch (category) {
@@ -156,8 +165,26 @@ async function main() {
   console.log('Creating colleges and courses...');
   
   const collegeCreatePromises = colleges.map(async (collegeData) => {
+    // Assign acceptedExams based on college type / name
+    let acceptedExams = 'JEE_MAIN'; // default
+    const sn = collegeData.shortName.toLowerCase();
+    const collegeName = collegeData.name.toLowerCase();
+    
+    if (sn.includes('iit') && !sn.includes('iiit')) {
+      acceptedExams = 'JEE_ADVANCED';
+    } else if (
+      collegeData.state === 'Maharashtra' &&
+      !sn.includes('iit') &&
+      !sn.includes('nit') &&
+      !sn.includes('iiit')
+    ) {
+      acceptedExams = 'MHT_CET,JEE_MAIN';
+    } else if (collegeName.includes('vnit') || sn === 'vnit nagpur') {
+      acceptedExams = 'MHT_CET,JEE_MAIN';
+    }
+
     const college = await prisma.college.create({
-      data: collegeData,
+      data: { ...collegeData, acceptedExams },
     });
 
     const courseCreatePromises = courses.map(async (courseName) => {
@@ -174,8 +201,14 @@ async function main() {
       });
 
       const cutoffData = [];
+      // Determine which exam types to generate cutoffs for based on college
+      const examTypes: ExamType[] = [];
+      if (acceptedExams.includes('MHT_CET')) examTypes.push(ExamType.MHT_CET);
+      if (acceptedExams.includes('JEE_MAIN')) examTypes.push(ExamType.JEE_MAIN);
+      if (acceptedExams.includes('JEE_ADVANCED')) examTypes.push(ExamType.JEE_ADVANCED);
+      
       for (const year of [2023, 2024, 2025]) {
-        for (const examType of [ExamType.MHT_CET, ExamType.JEE_MAIN]) {
+        for (const examType of examTypes) {
           for (const category of [Category.OPEN, Category.OBC, Category.EWS, Category.SC, Category.ST]) {
             const branchName = branches[Math.floor(Math.random() * branches.length)];
             const cutoffScore = getRandomCutoff(examType, category, year);

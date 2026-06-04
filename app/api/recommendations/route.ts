@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       where.state = preferredState;
     }
 
-    // Fetch colleges with cutoffs
+    // Fetch colleges with cutoffs (check multiple years for better results)
     const colleges = await prisma.college.findMany({
       where,
       include: {
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
               where: {
                 examType: examType as any,
                 category: category as any,
-                year: 2024, // Latest year
+                year: { in: [2023, 2024, 2025] }, // Multiple years for better coverage
                 ...(preferredBranch && {
                   branch: {
                     contains: preferredBranch,
@@ -58,31 +58,34 @@ export async function GET(request: NextRequest) {
                   },
                 }),
               },
-              orderBy: {
-                cutoffScore: 'asc',
-              },
-              take: 1,
+              orderBy: [
+                { year: 'desc' }, // Latest year first
+                { cutoffScore: 'asc' },
+              ],
+              take: 3, // Get multiple cutoffs per course
             },
           },
         },
       },
     });
 
-    // Categorize colleges
+    // Categorize colleges with more flexible criteria
     const safe: any[] = [];
     const target: any[] = [];
     const dream: any[] = [];
 
     colleges.forEach((college) => {
-      // Find minimum cutoff for this college
+      // Find minimum cutoff for this college across all years and courses
       let minCutoff = Infinity;
       let relevantCourseName: string | undefined;
+      let latestYear = 0;
       
       college.courses.forEach((course) => {
         course.cutoffs.forEach((cutoff) => {
           if (cutoff.cutoffScore < minCutoff) {
             minCutoff = cutoff.cutoffScore;
             relevantCourseName = course.name;
+            latestYear = cutoff.year;
           }
         });
       });
@@ -123,6 +126,7 @@ export async function GET(request: NextRequest) {
         matchScore,
         reason,
         relevantCourse: relevantCourseName,
+        latestCutoffYear: latestYear,
         courses: college.courses.map((c: any) => ({
           id: c.id,
           name: c.name,
@@ -131,13 +135,20 @@ export async function GET(request: NextRequest) {
         })),
       };
 
-      if (score >= minCutoff + 10) {
+      // More flexible categorization thresholds
+      const diff = score - minCutoff;
+      
+      if (diff >= 5) {
+        // Score is 5+ percentile above cutoff - Safe
         safe.push(collegeData);
-      } else if (score >= minCutoff - 3) {
+      } else if (diff >= -5) {
+        // Score is within 5 percentile range - Target
         target.push(collegeData);
-      } else if (score >= minCutoff - 15) {
+      } else if (diff >= -20) {
+        // Score is within 20 percentile below - Dream
         dream.push(collegeData);
       }
+      // Colleges with score more than 20 percentile below are not included
     });
 
     // Sort by match score
